@@ -4,8 +4,11 @@ lip: lip.c
 		-fansi-escape-codes \
 		-g \
 		lip.c \
+		mpc.c \
 		-l \
 		edit \
+		-l \
+		m \
 		-o \
 		lip
 
