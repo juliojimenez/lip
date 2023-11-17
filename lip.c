@@ -1,4 +1,5 @@
 #include "mpc.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -42,30 +43,32 @@ int number_of_nodes(mpc_ast_t* t) {
   return 0;
 }
 
-long eval(mpc_ast_t* t) {
-  // If tagged as number return it directly
-  if (strstr(t->tag, "number")) {
-    return atoi(t->contents);
-  }
-  // The operator is always second child
-  char* op = t->children[1]->contents;
-  // We store the third child in x
-  long x = eval(t->children[2]);
-  // Iterate the remaining children and combining
-  int i = 3;
-  while (strstr(t->children[i]->tag, "expr")) {
-    x = eval_op(x, op, eval(t->children[i]));
-    i++;
-  }
-  return x;
-}
-
 // Use operator string to see which operation to perform
 long eval_op(long x, char* op, long y) {
   if (strcmp(op, "+") == 0) { return x + y; }
   if (strcmp(op, "-") == 0) { return x - y; }
   if (strcmp(op, "*") == 0) { return x * y; }
   if (strcmp(op, "/") == 0) { return x / y; }
+  return 0;
+}
+
+long eval(mpc_ast_t* t) {
+  // If tagged as number return it directly
+  if (strstr(t->tag, "number")) {
+    return atoi(t->contents);
+  }
+  
+  // The operator is always the third child
+  char* op = t->children[2]->contents;
+  // We store the fourth child in x
+  long x = eval(t->children[3]);
+  // Iterate the remaining children and combining
+  int i = 4;
+  while (strstr(t->children[i]->tag, "expr")) {
+    x = eval_op(x, op, eval(t->children[i]));
+    i++;
+  }
+  return x;
 }
 
 int main(int argc, char** argv) {
@@ -81,7 +84,7 @@ int main(int argc, char** argv) {
       number    : /-?[0-9]+/ ;                            \
       operator  : '+' | '-' | '*' | '/' ;                 \
       expr      : <number> | '(' <operator> <expr>* ')' ; \
-      lip       : /^/ '(' <operator> <expr>+ ')' /$/ ;            \
+      lip       : /^/ '(' <operator> <expr>+ ')' /$/ ;    \
     ",
     Number, Operator, Expr, Lip);
 
@@ -106,10 +109,13 @@ int main(int argc, char** argv) {
       printf("Contents: %s\n", a->contents);
       printf("Number of children: %i\n", a->children_num);
       // Get first child
-      mpc_ast_t* c0 = a->children[1];
+      mpc_ast_t* c0 = a->children[2];
       printf("First Child Tag: %s\n", c0->tag);
       printf("First Child Contents: %s\n", c0->contents);
       printf("First Child Number of Children: %i\n", c0->children_num);
+      // Eval
+      long result = eval(r.output);
+      printf("%li\n", result);
       // Delete AST
       mpc_ast_delete(r.output);
     } else {
