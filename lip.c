@@ -53,20 +53,29 @@ long eval_op(long x, char* op, long y) {
 }
 
 long eval(mpc_ast_t* t) {
-  // If tagged as number return it directly
   if (strstr(t->tag, "number")) {
     return atoi(t->contents);
   }
-  
-  // The operator is always the third child
   char* op = t->children[2]->contents;
-  // We store the fourth child in x
+  if (strstr(t->children[2]->tag, "operator") == 0) {
+    op = t->children[1]->contents;
+  }
+  printf("op: %s\n", op);
   long x = eval(t->children[3]);
-  // Iterate the remaining children and combining
+  printf("x: %ld\n", x);
   int i = 4;
+  if (strstr(t->children[i]->tag, "expr") == 0) {
+    printf("in\n");
+    i = 3;
+  }
+  printf("tag: %s\n", t->children[i]->tag);
   while (strstr(t->children[i]->tag, "expr")) {
     x = eval_op(x, op, eval(t->children[i]));
+    printf("loop x: %ld\n", x);
+    printf("loop op: %s\n", op);
+    printf("loop tag: %s\n", t->children[i]->tag);
     i++;
+    printf("loop tag+: %s\n", t->children[i]->tag);
   }
   return x;
 }
