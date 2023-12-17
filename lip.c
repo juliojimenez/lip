@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define VERSION "0.0.3"
+#define VERSION "0.0.4"
 
 // if we are compiling on windows compile these functions
 #ifdef _WIN32
@@ -30,6 +30,19 @@ void add_history(char* unused) {}
 #else
 #include <editline/readline.h>
 #endif
+
+// Create enumeration of possible error types
+enum { LERR_DIV_ZERO, LERR_BAD_OP, LERR_BAD_NUM };
+
+// Create enumeration of possible lval types
+enum { LVAL_NUM, LVAL_ERR };
+
+// Declare new lval struct
+typedef struct {
+    int type;
+    long num;
+    int err;
+} lval;
 
 int number_of_nodes(mpc_ast_t* t) {
   if (t->children_num == 0) { return 1; }
