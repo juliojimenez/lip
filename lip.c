@@ -44,6 +44,48 @@ typedef struct {
     int err;
 } lval;
 
+// Create a new number type lval
+lval lval_num(long x) {
+    lval v;
+    v.type = LVAL_NUM;
+    v.num = x;
+    return v;
+}
+
+// Create a new error type lval
+lval lval_err(int x) {
+    lval v;
+    v.type = LVAL_ERR;
+    v.err = x;
+    return v;
+}
+
+// Print an lval
+void lval_print(lval v) {
+    switch (v.type) {
+        // In the case the type is a number, print it
+        // then break out of the switch
+        case LVAL_NUM: printf("%li", v.num); break;
+
+        // In the case the type is an error...
+        case LVAL_ERR:
+            // Check what type of error it is and print it
+            if (v.err == LERR_DIV_ZERO) {
+                printf("Error: Division by Zero!");
+            }
+            if (v.err == LERR_BAD_OP) {
+                printf("Error: Invalid Operator!");
+            }
+            if (v.err == LERR_BAD_NUM) {
+                printf("Error: Invalid Number!");
+            }
+        break;
+    }
+}
+
+// Print an lval, followed by a newline.
+void lval_println(lval v) { lval_print(v); putchar('\n'); }
+
 int number_of_nodes(mpc_ast_t* t) {
   if (t->children_num == 0) { return 1; }
   if (t->children_num >= 1) {
@@ -57,40 +99,58 @@ int number_of_nodes(mpc_ast_t* t) {
 }
 
 // Use operator string to see which operation to perform
-long eval_op(long x, char* op, long y) {
-  if (strcmp(op, "+") == 0) { return x + y; }
-  if (strcmp(op, "-") == 0) { return x - y; }
-  if (strcmp(op, "*") == 0) { return x * y; }
-  if (strcmp(op, "/") == 0) { return x / y; }
-  return 0;
+lval eval_op(lval x, char* op, lval y) {
+    // If either value is an error return it
+    if (x.type == LVAL_ERR) { return x; }
+    if (y.type == LVAL_ERR) { return y; }
+
+    // Otherwise do maths on the number values
+    if (strcmp(op, "+") == 0) { return lval_num(x.num + y.num); }
+    if (strcmp(op, "-") == 0) { return lval_num(x.num - y.num); }
+    if (strcmp(op, "*") == 0) { return lval_num(x.num * y.num); }
+    if (strcmp(op, "/") == 0) {
+        // If second operand is zero return error
+        return y.num == 0
+            ? lval_err(LERR_DIV_ZERO)
+            : lval_num(x.num / y.num); 
+    }
+    return lval_err(LERR_BAD_OP);
 }
 
-long eval(mpc_ast_t* t) {
-  if (strstr(t->tag, "number")) {
-    return atoi(t->contents);
-  }
-  char* op = t->children[2]->contents;
-  if (strstr(t->children[2]->tag, "operator") == 0) {
-    op = t->children[1]->contents;
-  }
-  printf("op: %s\n", op);
-  long x = eval(t->children[3]);
-  printf("x: %ld\n", x);
-  int i = 4;
-  if (strstr(t->children[i]->tag, "expr") == 0) {
-    printf("in\n");
-    i = 3;
-  }
-  printf("tag: %s\n", t->children[i]->tag);
-  while (strstr(t->children[i]->tag, "expr")) {
-    x = eval_op(x, op, eval(t->children[i]));
-    printf("loop x: %ld\n", x);
-    printf("loop op: %s\n", op);
-    printf("loop tag: %s\n", t->children[i]->tag);
-    i++;
-    printf("loop tag+: %s\n", t->children[i]->tag);
-  }
-  return x;
+lval eval(mpc_ast_t* t) {
+    if (strstr(t->tag, "number")) {
+        // Check if there is some error in conversion
+        errno = 0;
+        long x = strtol(t->contents, NULL, 10);
+        return errno != ERANGE ? lval_num(x) : lval_err(LERR_BAD_NUM);
+    }
+  
+    char* op = t->children[2]->contents;
+    // Helps with finding operators in nested forms
+    if (strstr(t->children[2]->tag, "operator") == 0) {
+        op = t->children[1]->contents;
+    }
+    printf("op: %s\n", op);
+  
+    lval x = eval(t->children[3]);
+    printf("x: "); lval_println(x);
+    
+    int i = 4;
+    // Helps with finding expressions in nested forms
+    if (strstr(t->children[i]->tag, "expr") == 0) {
+        printf("in\n");
+        i = 3;
+    }
+    printf("tag: %s\n", t->children[i]->tag);
+    while (strstr(t->children[i]->tag, "expr")) {
+        x = eval_op(x, op, eval(t->children[i]));
+        printf("loop x: "); lval_println(x);
+        printf("loop op: %s\n", op);
+        printf("loop tag: %s\n", t->children[i]->tag);
+        i++;
+        printf("loop tag+: %s\n", t->children[i]->tag);
+    }
+    return x;
 }
 
 int main(int argc, char** argv) {
@@ -136,8 +196,8 @@ int main(int argc, char** argv) {
       printf("First Child Contents: %s\n", c0->contents);
       printf("First Child Number of Children: %i\n", c0->children_num);
       // Eval
-      long result = eval(r.output);
-      printf("%li\n", result);
+      lval result = eval(r.output);
+      lval_println(result);
       // Delete AST
       mpc_ast_delete(r.output);
     } else {
