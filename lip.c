@@ -130,7 +130,7 @@ lval eval(mpc_ast_t* t) {
     if (strstr(t->children[2]->tag, "operator") == 0) {
         op = t->children[1]->contents;
     }
-    printf("op: %s\n", op);
+    // printf("op: %s\n", op);
   
     lval x = eval(t->children[3]);
     printf("x: "); lval_println(x);
