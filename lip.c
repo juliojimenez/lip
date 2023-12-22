@@ -133,7 +133,7 @@ lval eval(mpc_ast_t* t) {
     // printf("op: %s\n", op);
   
     lval x = eval(t->children[3]);
-    printf("x: "); lval_println(x);
+    //printf("x: "); lval_println(x);
     
     int i = 4;
     // Helps with finding expressions in nested forms
